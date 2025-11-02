@@ -1,6 +1,6 @@
-import "../src/app/globals.css";
-import Navbar from "../src/components/Navbar";
-import Footer from "../src/components/Footer";
+import "./globals.css";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import React from "react";
 
 export const metadata = {
@@ -19,5 +19,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-
-

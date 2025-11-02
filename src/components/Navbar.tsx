@@ -9,11 +9,41 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [loggedIn, setLoggedIn] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     if (typeof window !== "undefined" && localStorage.getItem("token")) setLoggedIn(true);
     else setLoggedIn(false);
+    
+    // Load cart count
+    updateCartCount();
   }, [pathname]);
+
+  // Listen for cart changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      updateCartCount();
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    // Also check periodically for same-tab updates
+    const interval = setInterval(updateCartCount, 1000);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
+
+  function updateCartCount() {
+    try {
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const count = cart.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
+      setCartCount(count);
+    } catch (err) {
+      setCartCount(0);
+    }
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -25,8 +55,6 @@ export default function Navbar() {
   const menuItems = [
     { name: "Home", path: "/" },
     { name: "Products", path: "/products" },
-    { name: "Cart", path: "/cart" },
-    { name: "Checkout", path: "/checkout" },
   ];
 
   return (
@@ -49,9 +77,19 @@ export default function Navbar() {
             </li>
           ))}
           <li>
-            <Link href="/cart" className="text-gray-700 hover:text-primary flex items-center gap-2">
+            <Link 
+              href="/cart" 
+              className={`relative text-gray-700 hover:text-primary flex items-center gap-2 ${
+                pathname === "/cart" ? "text-primary" : ""
+              }`}
+            >
               <ShoppingCart className="w-5 h-5" />
-              <span className="sr-only">Cart</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {cartCount > 9 ? "9+" : cartCount}
+                </span>
+              )}
+              <span className="sr-only">Cart ({cartCount} items)</span>
             </Link>
           </li>
           <li>
