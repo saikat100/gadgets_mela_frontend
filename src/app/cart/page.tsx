@@ -13,16 +13,34 @@ interface CartItem extends Product {
 export default function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const router = useRouter();
 
   useEffect(() => {
     loadCart();
   }, []);
 
-  function loadCart() {
+  async function loadCart() {
     try {
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      setCartItems(cart);
+      
+      // Fetch latest product data to get current stock
+      const updatedCart = await Promise.all(
+        cart.map(async (item: CartItem) => {
+          try {
+            const res = await fetch(`http://localhost:5000/api/products/${item._id}`);
+            if (res.ok) {
+              const product = await res.json();
+              return { ...item, stock: product.stock, price: product.price, discount: product.discount };
+            }
+            return item;
+          } catch (err) {
+            return item;
+          }
+        })
+      );
+      
+      setCartItems(updatedCart);
       setLoading(false);
     } catch (err) {
       setCartItems([]);
@@ -36,15 +54,35 @@ export default function CartPage() {
       return;
     }
 
+    const item = cartItems.find((item) => item._id === id);
+    if (!item) return;
+
+    // Check stock limit
+    if (item.stock !== undefined && item.stock > 0) {
+      if (newQuantity > item.stock) {
+        setError(`Only ${item.stock} items available in stock for ${item.name}`);
+        setTimeout(() => setError(""), 3000);
+        return;
+      }
+    }
+
     try {
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
       const updatedCart = cart.map((item: CartItem) =>
         item._id === id ? { ...item, quantity: newQuantity } : item
       );
       localStorage.setItem("cart", JSON.stringify(updatedCart));
-      setCartItems(updatedCart);
+      
+      // Update state with latest stock info
+      setCartItems((prevItems) =>
+        prevItems.map((item) =>
+          item._id === id ? { ...item, quantity: newQuantity } : item
+        )
+      );
+      setError("");
     } catch (err) {
-      console.error("Failed to update quantity");
+      setError("Failed to update quantity");
+      setTimeout(() => setError(""), 3000);
     }
   }
 
@@ -77,6 +115,11 @@ export default function CartPage() {
 
   function calculateSubtotal() {
     return cartItems.reduce((total, item) => total + calculateItemTotal(item), 0);
+  }
+
+  function isMaxQuantity(item: CartItem) {
+    if (item.stock === undefined) return false;
+    return item.quantity >= item.stock;
   }
 
   if (loading) {
@@ -121,17 +164,27 @@ export default function CartPage() {
         </button>
       </div>
 
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
           {cartItems.map((item) => {
             const finalPrice = calculateDiscountedPrice(item.price, item.discount || 0);
             const itemTotal = calculateItemTotal(item);
+            const maxQuantity = isMaxQuantity(item);
+            const outOfStock = item.stock !== undefined && item.stock <= 0;
 
             return (
               <div
                 key={item._id}
-                className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row gap-4"
+                className={`bg-white rounded-lg shadow p-4 flex flex-col md:flex-row gap-4 ${
+                  outOfStock ? "opacity-60" : ""
+                }`}
               >
                 <Link href={`/products/${item._id}`} className="flex-shrink-0">
                   <Image
@@ -158,22 +211,51 @@ export default function CartPage() {
                         <span className="text-primary font-semibold">${item.price.toFixed(2)}</span>
                       )}
                     </div>
+                    {item.stock !== undefined && (
+                      <p className={`text-sm mt-1 ${
+                        item.stock > 0 
+                          ? item.stock < 10 
+                            ? "text-orange-600" 
+                            : "text-green-600"
+                          : "text-red-600"
+                      }`}>
+                        {item.stock > 0 
+                          ? `Stock: ${item.stock} available` 
+                          : "Out of Stock"}
+                      </p>
+                    )}
                   </div>
                   <div className="mt-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => updateQuantity(item._id, item.quantity - 1)}
-                        className="w-8 h-8 rounded border flex items-center justify-center hover:bg-gray-100"
-                      >
-                        <Minus className="w-4 h-4" />
-                      </button>
-                      <span className="w-12 text-center font-medium">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item._id, item.quantity + 1)}
-                        className="w-8 h-8 rounded border flex items-center justify-center hover:bg-gray-100"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                          disabled={item.quantity <= 1}
+                          className={`w-8 h-8 rounded border flex items-center justify-center ${
+                            item.quantity <= 1
+                              ? "opacity-50 cursor-not-allowed bg-gray-100"
+                              : "hover:bg-gray-100"
+                          }`}
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="w-12 text-center font-medium">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                          disabled={maxQuantity || outOfStock}
+                          className={`w-8 h-8 rounded border flex items-center justify-center ${
+                            maxQuantity || outOfStock
+                              ? "opacity-50 cursor-not-allowed bg-gray-100"
+                              : "hover:bg-gray-100"
+                          }`}
+                          title={maxQuantity ? "Maximum quantity reached" : outOfStock ? "Out of stock" : "Increase quantity"}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                      {maxQuantity && (
+                        <span className="text-xs text-orange-600">Max quantity reached</span>
+                      )}
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-500">Item Total</p>

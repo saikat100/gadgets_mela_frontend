@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import AdminSidebar from "../../../components/AdminSidebar";
+import AdminSidebar from "../AdminSidebar";
 import Image from "next/image";
 import { Product } from "../../../types/product";
 import { Trash2, Edit2, Plus, X, Save } from "lucide-react";
@@ -18,6 +18,8 @@ export default function AdminProductsPage() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    category: "",
+    subCategory: "",
     price: "",
     discount: "",
     imageUrl: "",
@@ -78,6 +80,8 @@ export default function AdminProductsPage() {
     setFormData({
       name: "",
       description: "",
+      category: "",
+      subCategory: "",
       price: "",
       discount: "",
       imageUrl: "",
@@ -92,6 +96,8 @@ export default function AdminProductsPage() {
     setFormData({
       name: product.name,
       description: product.description,
+      category: product.category,
+      subCategory: product.subCategory || "",
       price: product.price.toString(),
       discount: (product.discount || 0).toString(),
       imageUrl: product.imageUrl,
@@ -112,6 +118,8 @@ export default function AdminProductsPage() {
     const productData = {
       name: formData.name,
       description: formData.description,
+      category: formData.category,
+      subCategory: formData.subCategory || undefined,
       price: parseFloat(formData.price),
       discount: formData.discount ? parseFloat(formData.discount) : 0,
       imageUrl: formData.imageUrl,
@@ -266,6 +274,38 @@ export default function AdminProductsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="block text-sm font-medium mb-1">Category *</label>
+                  <select
+                    required
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="">Select Category</option>
+                    <option value="Mobile">Mobile</option>
+                    <option value="Laptop">Laptop</option>
+                    <option value="Tablet">Tablet</option>
+                    <option value="Accessories">Accessories</option>
+                    <option value="Audio">Audio</option>
+                    <option value="Smartwatch">Smartwatch</option>
+                    <option value="Camera">Camera</option>
+                    <option value="Gaming">Gaming</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Sub Category (Optional)</label>
+                  <input
+                    type="text"
+                    value={formData.subCategory}
+                    onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
+                    placeholder="e.g., iPhone, Samsung, Dell, etc."
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="block text-sm font-medium mb-1">Price ($)</label>
                   <input
                     type="number"
@@ -336,6 +376,7 @@ export default function AdminProductsPage() {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Image</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Final Price</th>
@@ -346,7 +387,7 @@ export default function AdminProductsPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                       No products found. Add your first product!
                     </td>
                   </tr>
@@ -367,6 +408,12 @@ export default function AdminProductsPage() {
                         <div className="text-sm text-gray-500 truncate max-w-xs">
                           {product.description}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-medium">{product.category}</div>
+                        {product.subCategory && (
+                          <div className="text-sm text-gray-500">{product.subCategory}</div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">${product.price}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
