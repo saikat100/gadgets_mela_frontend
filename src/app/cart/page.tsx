@@ -72,6 +72,9 @@ export default function CartPage() {
         item._id === id ? { ...item, quantity: newQuantity } : item
       );
       localStorage.setItem("cart", JSON.stringify(updatedCart));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('cart-updated'));
+      }
       
       // Update state with latest stock info
       setCartItems((prevItems) =>
@@ -91,6 +94,9 @@ export default function CartPage() {
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
       const updatedCart = cart.filter((item: CartItem) => item._id !== id);
       localStorage.setItem("cart", JSON.stringify(updatedCart));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('cart-updated'));
+      }
       setCartItems(updatedCart);
     } catch (err) {
       console.error("Failed to remove item");
@@ -100,6 +106,9 @@ export default function CartPage() {
   function clearCart() {
     if (confirm("Are you sure you want to clear your cart?")) {
       localStorage.setItem("cart", "[]");
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('cart-updated'));
+      }
       setCartItems([]);
     }
   }

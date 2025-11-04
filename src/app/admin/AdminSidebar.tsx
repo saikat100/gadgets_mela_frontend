@@ -7,6 +7,7 @@ export default function AdminSidebar() {
       <nav className="flex flex-col gap-4">
         <Link href="/admin/dashboard" className="hover:text-orange-400">Dashboard</Link>
         <Link href="/admin/products" className="hover:text-orange-400">Manage Products</Link>
+        <Link href="/admin/categories" className="hover:text-orange-400">Manage Categories</Link>
         <Link href="/admin/orders" className="hover:text-orange-400">View Orders</Link>
         <Link href="/admin/users" className="hover:text-orange-400">Manage Users</Link>
       </nav>

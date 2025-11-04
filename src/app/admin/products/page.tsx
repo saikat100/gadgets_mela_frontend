@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import AdminSidebar from "../AdminSidebar";
 import Image from "next/image";
 import { Product } from "../../../types/product";
+import { api } from "../../../lib/api";
 import { Trash2, Edit2, Plus, X, Save } from "lucide-react";
 
 export default function AdminProductsPage() {
@@ -14,6 +15,8 @@ export default function AdminProductsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const router = useRouter();
+  const [categories, setCategories] = useState<Array<{ _id: string; name: string; slug: string }>>([]);
+  const [subcatsByCat, setSubcatsByCat] = useState<Record<string, Array<{ _id: string; name: string; slug: string; category: string }>>>({});
 
   const [formData, setFormData] = useState({
     name: "",
@@ -38,7 +41,7 @@ export default function AdminProductsPage() {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/users/me", {
+      const res = await fetch(api('/users/me'), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -55,7 +58,7 @@ export default function AdminProductsPage() {
         return;
       }
 
-      await loadProducts(token);
+      await Promise.all([loadProducts(token), loadCategoriesAndSubcats()]);
     } catch (err) {
       setError("Failed to verify admin access");
       setIsAdmin(false);
@@ -64,7 +67,7 @@ export default function AdminProductsPage() {
 
   async function loadProducts(token: string) {
     try {
-      const res = await fetch("http://localhost:5000/api/products", {
+      const res = await fetch(api('/products'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -73,6 +76,28 @@ export default function AdminProductsPage() {
     } catch (err) {
       setError("Failed to load products");
       setLoading(false);
+    }
+  }
+
+  async function loadCategoriesAndSubcats() {
+    try {
+      const [catsRes, subsRes] = await Promise.all([
+        fetch(api('/categories')),
+        fetch(api('/subcategories')),
+      ]);
+      const cats = await catsRes.json();
+      const subs = await subsRes.json();
+      setCategories(cats);
+      const grouped: Record<string, Array<{ _id: string; name: string; slug: string; category: string }>> = {};
+      for (const s of subs) {
+        const catId = typeof s.category === 'string' ? s.category : s.category?._id;
+        if (!catId) continue;
+        if (!grouped[catId]) grouped[catId] = [];
+        grouped[catId].push({ _id: s._id, name: s.name, slug: s.slug, category: catId });
+      }
+      setSubcatsByCat(grouped);
+    } catch {
+      // ignore; leave lists empty
     }
   }
 
@@ -128,7 +153,7 @@ export default function AdminProductsPage() {
 
     try {
       if (editingId) {
-        const res = await fetch(`http://localhost:5000/api/products/${editingId}`, {
+        const res = await fetch(api(`/products/${editingId}`), {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -145,7 +170,7 @@ export default function AdminProductsPage() {
         await loadProducts(token);
         resetForm();
       } else {
-        const res = await fetch("http://localhost:5000/api/products", {
+        const res = await fetch(api('/products'), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -174,7 +199,7 @@ export default function AdminProductsPage() {
     if (!token) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/products/${id}`, {
+      const res = await fetch(api(`/products/${id}`), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -278,30 +303,34 @@ export default function AdminProductsPage() {
                   <select
                     required
                     value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value, subCategory: "" })}
                     className="w-full p-2 border rounded"
                   >
                     <option value="">Select Category</option>
-                    <option value="Mobile">Mobile</option>
-                    <option value="Laptop">Laptop</option>
-                    <option value="Tablet">Tablet</option>
-                    <option value="Accessories">Accessories</option>
-                    <option value="Audio">Audio</option>
-                    <option value="Smartwatch">Smartwatch</option>
-                    <option value="Camera">Camera</option>
-                    <option value="Gaming">Gaming</option>
-                    <option value="Other">Other</option>
+                    {categories.map((c) => (
+                      <option key={c._id} value={c.name}>{c.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Sub Category (Optional)</label>
-                  <input
-                    type="text"
-                    value={formData.subCategory}
-                    onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
-                    placeholder="e.g., iPhone, Samsung, Dell, etc."
-                    className="w-full p-2 border rounded"
-                  />
+                  {(() => {
+                    const selectedCat = categories.find((c) => c.name === formData.category);
+                    const subcats = selectedCat ? (subcatsByCat[selectedCat._id] || []) : [];
+                    return (
+                      <select
+                        value={formData.subCategory}
+                        onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
+                        disabled={!selectedCat}
+                        className="w-full p-2 border rounded disabled:bg-gray-100 disabled:text-gray-500"
+                      >
+                        <option value="">{selectedCat ? "Select Subcategory (optional)" : "Select a category first"}</option>
+                        {subcats.map((s) => (
+                          <option key={s._id} value={s.name}>{s.name}</option>
+                        ))}
+                      </select>
+                    );
+                  })()}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

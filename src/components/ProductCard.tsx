@@ -29,6 +29,9 @@ export default function ProductCard({ product }: { product: Product }) {
       }
       
       localStorage.setItem("cart", JSON.stringify(cart));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('cart-updated'));
+      }
       setAdding(true);
       setMessage("Added to cart!");
       

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { api } from "../../../lib/api";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
@@ -22,7 +23,7 @@ export default function ProductDetails() {
 
   async function loadProduct(id: string) {
     try {
-      const res = await fetch(`http://localhost:5000/api/products/${id}`);
+      const res = await fetch(api(`/products/${id}`));
       if (!res.ok) throw new Error("Product not found");
       const data = await res.json();
       setProduct(data);
@@ -46,6 +47,9 @@ export default function ProductDetails() {
       }
       
       localStorage.setItem("cart", JSON.stringify(cart));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('cart-updated'));
+      }
       setAdding(true);
       setMessage("Added to cart!");
       
