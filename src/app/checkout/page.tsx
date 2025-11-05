@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { api } from "../../lib/api";
 
 interface CartItem {
-  productId: string;
+  _id?: string;
+  productId?: string;
   name: string;
   price: number;
   quantity: number;
@@ -42,7 +43,7 @@ export default function CheckoutPage() {
     if (!token) return;
     (async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/users/me", { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(api('/users/me'), { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) return;
         const me = await res.json();
         if (me?.name && !address.fullName) {
@@ -72,7 +73,7 @@ export default function CheckoutPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          products: cart.map((c) => ({ product: c.productId, quantity: c.quantity })),
+          products: cart.map((c) => ({ product: c.productId || c._id, quantity: c.quantity })),
           total: subtotal,
           paymentId: "COD",
           shippingAddress: address,

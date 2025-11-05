@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Product } from "../../../types/product";
 import { api } from "../../../lib/api";
 import { Trash2, Edit2, Plus, X, Save } from "lucide-react";
+import { Skeleton } from "../../../components/Skeleton";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -224,7 +225,15 @@ export default function AdminProductsPage() {
       <div className="flex">
         <AdminSidebar />
         <main className="flex-1 p-8">
-          <div>Loading...</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="border rounded p-4">
+                <Skeleton className="h-28 w-full mb-3" />
+                <Skeleton className="h-4 w-2/3 mb-2" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
         </main>
       </div>
     );

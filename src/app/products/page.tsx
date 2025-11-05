@@ -5,6 +5,7 @@ import { api } from "../../lib/api";
 import ProductGrid from "../../components/ProductGrid";
 import { Product } from "../../types/product";
 import { ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
+import { SkeletonCard } from "../../components/Skeleton";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -16,19 +17,21 @@ export default function ProductsPage() {
   const searchParams = useSearchParams();
   const selectedCategory = searchParams.get("category") || "";
   const selectedSub = searchParams.get("sub") || "";
+  const query = searchParams.get("q") || searchParams.get("search") || "";
 
   const heading = useMemo(() => {
     if (selectedCategory && selectedSub) return `${selectedCategory} / ${selectedSub}`;
     if (selectedCategory) return selectedCategory;
+    if (query) return `Search: ${query}`;
     return "Our Products";
-  }, [selectedCategory, selectedSub]);
+  }, [selectedCategory, selectedSub, query]);
 
   const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
 
   useEffect(() => {
     loadProducts();
     setCurrentPage(1);
-  }, [selectedCategory, selectedSub]);
+  }, [selectedCategory, selectedSub, query]);
 
   async function loadProducts() {
     setLoading(true);
@@ -37,6 +40,7 @@ export default function ProductsPage() {
       const params = new URLSearchParams();
       if (selectedCategory) params.set("category", selectedCategory);
       if (selectedSub) params.set("sub", selectedSub);
+      if (query) params.set("q", query);
       const url = `${api('/products')}${params.toString() ? `?${params.toString()}` : ""}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to load products");
@@ -60,8 +64,12 @@ export default function ProductsPage() {
   if (loading) {
     return (
       <section className="max-w-7xl mx-auto p-6">
-        <h2 className="text-2xl font-bold mb-6 text-primary">Our Products</h2>
-        <div className="text-center py-12">Loading products...</div>
+        <h2 className="text-2xl font-bold mb-6 text-primary">{heading}</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
       </section>
     );
   }

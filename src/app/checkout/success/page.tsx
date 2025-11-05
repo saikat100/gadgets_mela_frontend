@@ -29,7 +29,7 @@ export default function CheckoutSuccessPage() {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            products: cart.map((c: any) => ({ product: c.productId, quantity: c.quantity })),
+            products: cart.map((c: any) => ({ product: c.productId || c._id, quantity: c.quantity })),
             total,
             paymentId: sessionId || "STRIPE",
             shippingAddress: {},

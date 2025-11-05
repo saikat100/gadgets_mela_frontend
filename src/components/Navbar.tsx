@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
-import { ShoppingCart, Menu, X, ChevronDown, UserCircle } from "lucide-react";
+import { ShoppingCart, Menu, X, ChevronDown, UserCircle, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 
@@ -16,6 +16,8 @@ export default function Navbar() {
   const [subcatsByCat, setSubcatsByCat] = useState<Record<string, Array<{ _id: string; name: string; slug: string; category: string }>>>({});
   const [isAdmin, setIsAdmin] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined" && localStorage.getItem("token"))
@@ -114,17 +116,41 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 bg-[var(--background)] shadow-sm z-50">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center gap-4">
         {/* Logo */}
         <Link
           href="/"
-          className="text-2xl font-bold text-primary hover:opacity-90"
+          className="text-2xl font-bold text-primary hover:opacity-90 whitespace-nowrap"
         >
           Gadgets Mela
         </Link>
 
+        {/* Desktop Search */}
+        <form
+          onSubmit={(e) => { e.preventDefault(); router.push(`/products?q=${encodeURIComponent(search)}`); }}
+          className="hidden md:flex flex-1 max-w-xl"
+          role="search"
+          aria-label="Search products"
+        >
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search products..."
+            className="w-full border rounded px-3 py-2"
+          />
+        </form>
+
         {/* Desktop Menu */}
         <ul className="hidden md:flex space-x-6 items-center">
+          <li>
+            <button
+              aria-label="Search"
+              onClick={() => router.push(search ? `/products?q=${encodeURIComponent(search)}` : "/products")}
+              className="text-gray-700 hover:text-primary p-2 rounded"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+          </li>
           {menuItems.map((item) => (
             <li key={item.path}>
               <Link
@@ -206,18 +232,42 @@ export default function Navbar() {
         </ul>
 
         {/* Mobile Menu Button */}
-        <button
-          className="md:hidden text-gray-700 hover:text-primary"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            aria-label="Search"
+            className="md:hidden text-gray-700 hover:text-primary"
+            onClick={() => { setMenuOpen(false); router.push(search ? `/products?q=${encodeURIComponent(search)}` : "/products"); }}
+          >
+            <Search className="w-6 h-6" />
+          </button>
+          <button
+            className="md:hidden text-gray-700 hover:text-primary"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Dropdown Menu */}
       {menuOpen && (
         <div className="md:hidden bg-[var(--background)] border-t border-gray-200 shadow-inner">
           <ul className="flex flex-col space-y-2 py-3 px-4">
+            {/* Mobile Search */}
+            <li>
+              <form
+                onSubmit={(e) => { e.preventDefault(); setMenuOpen(false); router.push(`/products?q=${encodeURIComponent(search)}`); }}
+                role="search"
+                aria-label="Search products"
+              >
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search products..."
+                  className="w-full border rounded px-3 py-2"
+                />
+              </form>
+            </li>
             {menuItems.map((item) => (
               <li key={item.path}>
                 <Link
@@ -272,6 +322,62 @@ export default function Navbar() {
                 </div>
               </div>
             </li>
+
+            {/* Mobile Categories with nested subcategories */}
+            {categories.length > 0 && (
+              <li className="pt-2">
+                <div className="border rounded p-3">
+                  <div className="font-semibold mb-2">Categories</div>
+                  <ul className="flex flex-col divide-y">
+                    {categories.map((cat) => {
+                      const subcats = subcatsByCat[cat._id] || [];
+                      const catHref = `/products?category=${encodeURIComponent(cat.slug)}`;
+                      const isOpen = !!openCats[cat._id];
+                      return (
+                        <li key={cat._id} className="py-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <Link
+                              href={catHref}
+                              onClick={() => setMenuOpen(false)}
+                              className="text-gray-700 hover:text-primary"
+                            >
+                              {cat.name}
+                            </Link>
+                            {subcats.length > 0 && (
+                              <button
+                                aria-label="Toggle subcategories"
+                                onClick={() => setOpenCats((prev) => ({ ...prev, [cat._id]: !prev[cat._id] }))}
+                                className="text-gray-600 hover:text-primary"
+                              >
+                                <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                              </button>
+                            )}
+                          </div>
+                          {isOpen && subcats.length > 0 && (
+                            <ul className="mt-2 ml-3 flex flex-col gap-1">
+                              {subcats.map((s) => {
+                                const shref = `/products?category=${encodeURIComponent(cat.slug)}&sub=${encodeURIComponent(s.slug)}`;
+                                return (
+                                  <li key={s._id}>
+                                    <Link
+                                      href={shref}
+                                      onClick={() => setMenuOpen(false)}
+                                      className="text-sm text-gray-600 hover:text-primary"
+                                    >
+                                      {s.name}
+                                    </Link>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </li>
+            )}
 
             <li className="pt-2">
               <ThemeToggle />

@@ -2,6 +2,7 @@
 import { useEffect, useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "../AdminSidebar";
+import { Skeleton } from "../../../components/Skeleton";
 import { Plus, Trash2 } from "lucide-react";
 import { api } from "../../../lib/api";
 
@@ -172,7 +173,27 @@ export default function AdminCategoriesPage() {
     }
   }
 
-  if (loading || isAdmin === null) return <div className="p-8">Loading...</div>;
+  if (loading || isAdmin === null) return (
+    <div className="flex">
+      <AdminSidebar />
+      <main className="flex-1 p-8">
+        <div className="flex justify-between items-center mb-6">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-10 w-36" />
+        </div>
+        <div className="bg-white rounded shadow overflow-hidden">
+          <div className="p-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="py-3 border-t first:border-t-0 flex justify-between items-center">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-8 w-20" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
   if (!isAdmin) return <div className="p-8">Not authorized</div>;
 
   return (

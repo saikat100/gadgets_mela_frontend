@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Skeleton } from "../../../components/Skeleton";
 import Link from "next/link";
 import { api } from "../../../lib/api";
 
@@ -36,8 +37,7 @@ export default function UserDashboardPage() {
         if (meRes.ok) setUser(await meRes.json());
         const res = await fetch(api('/orders/mine'), { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) throw new Error("Failed to load orders");
-        const ordersData = await res.json();
-        setOrders(ordersData);
+        setOrders(await res.json());
       } catch (e: any) {
         setError(e.message || "Failed to load dashboard");
       } finally {
@@ -46,7 +46,27 @@ export default function UserDashboardPage() {
     })();
   }, []);
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  if (loading) return (
+    <section className="max-w-6xl mx-auto p-6">
+      <div className="mb-6 p-4 border rounded bg-white">
+        <Skeleton className="h-5 w-48 mb-2" />
+        <Skeleton className="h-4 w-72" />
+      </div>
+      <div className="p-4 border rounded bg-white">
+        <Skeleton className="h-6 w-40 mb-4" />
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 
   return (
     <section className="max-w-6xl mx-auto p-6">
