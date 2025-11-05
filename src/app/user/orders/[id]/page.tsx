@@ -11,6 +11,7 @@ export default function OrderDetailsPage() {
   const [order, setOrder] = useState<any>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -32,6 +33,29 @@ export default function OrderDetailsPage() {
       }
     })();
   }, [orderId, router]);
+
+  async function cancelOrder() {
+    if (!order || order.status !== 'pending') return;
+    if (!confirm('Are you sure you want to cancel this order?')) return;
+    try {
+      setSubmitting(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(api(`/orders/${order._id}/cancel`), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ message: 'Failed to cancel order' }));
+        throw new Error(data.message || 'Failed to cancel order');
+      }
+      const data = await res.json();
+      setOrder((prev: any) => ({ ...prev, status: data.order?.status || 'cancelled' }));
+    } catch (e: any) {
+      setError(e.message || 'Failed to cancel order');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (loading) return (
     <section className="max-w-4xl mx-auto p-6">
@@ -67,7 +91,18 @@ export default function OrderDetailsPage() {
   return (
     <section className="max-w-4xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-4">Order #{String(order._id).slice(-6)}</h1>
-      <div className="mb-4">Status: <span className="font-semibold capitalize">{order.status}</span></div>
+      <div className="mb-4 flex items-center gap-4">
+        <div>Status: <span className="font-semibold capitalize">{order.status}</span></div>
+        {order.status === 'pending' && (
+          <button
+            disabled={submitting}
+            onClick={cancelOrder}
+            className="text-red-600 hover:text-red-800 border border-red-300 rounded px-3 py-1 disabled:opacity-60"
+          >
+            {submitting ? 'Cancelling...' : 'Cancel Order'}
+          </button>
+        )}
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="p-4 border rounded bg-white">
           <h2 className="font-semibold mb-2">Shipping</h2>
