@@ -12,6 +12,7 @@ interface Order {
   _id: string;
   total: number;
   createdAt: string;
+  paymentId?: string | null;
   products: OrderItem[];
   status?: string;
 }
@@ -35,7 +36,8 @@ export default function UserDashboardPage() {
         if (meRes.ok) setUser(await meRes.json());
         const res = await fetch(api('/orders/mine'), { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) throw new Error("Failed to load orders");
-        setOrders(await res.json());
+        const ordersData = await res.json();
+        setOrders(ordersData);
       } catch (e: any) {
         setError(e.message || "Failed to load dashboard");
       } finally {
@@ -79,26 +81,67 @@ export default function UserDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o) => (
-                  <tr key={o._id} className="border-t">
-                    <td className="px-4 py-2"><a className="text-primary hover:underline" href={`/user/orders/${o._id}`}>#{o._id.slice(-6)}</a></td>
-                    <td className="px-4 py-2">{new Date(o.createdAt).toLocaleString()}</td>
-                    <td className="px-4 py-2 text-sm text-gray-700">
-                      {o.products.map((p, idx) => (
-                        <span key={idx} className="mr-2">{p.product?.name || 'Item'} x{p.quantity}</span>
-                      ))}
+                {orders?.length > 0 ? (
+                  orders.map((o) => (
+                    <tr key={o._id} className="border-t">
+                      <td className="px-4 py-2">
+                        <a
+                          className="text-primary hover:underline"
+                          href={`/user/orders/${o._id}`}
+                        >
+                          #{o._id?.slice(-6) || "N/A"}
+                        </a>
+                      </td>
+
+                      <td className="px-4 py-2">
+                        {o.createdAt ? new Date(o.createdAt).toLocaleString() : "Unknown"}
+                      </td>
+
+                      <td className="px-4 py-2 text-sm text-gray-700">
+                        {Array.isArray(o.products) && o.products.length > 0 ? (
+                          o.products.map((p, idx) => (
+                            <span key={idx} className="mr-2">
+                              {p.product?.name || "Item"} ×{p.quantity ?? 1}
+                            </span>
+                          ))
+                        ) : (
+                          <span>No products</span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-2">
+                        <span
+                          className={`px-2 py-1 rounded text-xs ${o.status === "paid"
+                              ? "bg-green-100 text-green-700"
+                              : o.status === "shipped"
+                                ? "bg-blue-100 text-blue-700"
+                                : o.status === "cancelled"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-yellow-100 text-yellow-800"
+                            }`}
+                        >
+                          {o.status || "pending"}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-2">
+                        {o.paymentId === "COD" || !o.paymentId
+                          ? "COD"
+                          : `$${o.total?.toFixed(2) || "0.00"} paid`}
+                      </td>
+
+                      <td className="px-4 py-2 text-right font-semibold">
+                        ${o.total?.toFixed(2) || "0.00"}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="text-center py-6 text-gray-500">
+                      No orders found
                     </td>
-                    <td className="px-4 py-2">
-                      <span className={`px-2 py-1 rounded text-xs ${o.status === 'paid' ? 'bg-green-100 text-green-700' : o.status === 'shipped' ? 'bg-blue-100 text-blue-700' : o.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {o.status || 'pending'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2">
-                      {o.paymentId === 'COD' || !o.paymentId ? 'COD' : `$${o.total.toFixed(2)} paid`}
-                    </td>
-                    <td className="px-4 py-2 text-right font-semibold">${o.total.toFixed(2)}</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
