@@ -18,31 +18,30 @@ interface Product {
     createdAt: string;
 }
 
-export default function NewArrival() {
+export default function BestDeal() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        async function fetchNewArrivals() {
+        async function fetchBestDeals() {
             try {
                 const res = await fetch(api("/products/"));
                 if (res.ok) {
                     const data = await res.json();
-                    // Sort by createdAt descending and take first 7
+                    // Filter only products with discount and sort by discount descending
                     const sorted = data
-                        .sort((a: Product, b: Product) =>
-                            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                        )
+                        .filter((p: Product) => p.discount && p.discount > 0)
+                        .sort((a: Product, b: Product) => (b.discount || 0) - (a.discount || 0))
                         .slice(0, 7);
                     setProducts(sorted);
                 }
             } catch (err) {
-                console.error("Failed to fetch new arrivals", err);
+                console.error("Failed to fetch best deals", err);
             } finally {
                 setLoading(false);
             }
         }
-        fetchNewArrivals();
+        fetchBestDeals();
     }, []);
 
     if (loading) {
@@ -66,9 +65,9 @@ export default function NewArrival() {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-3xl font-bold">
-                        New{" "}
+                        Best{" "}
                         <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">
-                            Arrival
+                            Deal
                         </span>
                     </h2>
 
@@ -88,8 +87,8 @@ export default function NewArrival() {
                         <button
                             key={cat}
                             className={`px-4 py-1 rounded-full text-sm font-medium border transition ${cat === activeCategory
-                                ? "bg-black text-white border-black"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                    ? "bg-black text-white border-black"
+                                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                                 }`}
                         >
                             {cat}
@@ -145,7 +144,7 @@ export default function NewArrival() {
                 </div>
 
                 {products.length === 0 && !loading && (
-                    <p className="text-gray-500 py-8">No new arrivals yet</p>
+                    <p className="text-gray-500 py-8">No deals available yet</p>
                 )}
             </div>
         </section>

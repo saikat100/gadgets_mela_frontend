@@ -1,80 +1,72 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { api } from "../lib/api";
 
 const categories = ["Gadgets", "Device"];
 const activeCategory = "Device";
 
-const products = [
-  {
-    id: 1,
-    name: "Nothing Phone (3) 5G",
-    price: 72000,
-    oldPrice: 90000,
-    discount: "20% OFF",
-    image: "/images/nothing-phone-3.png",
-  },
-  {
-    id: 2,
-    name: "Nothing Phone (3a) Pro 5G",
-    price: 36000,
-    oldPrice: 45000,
-    discount: "20% OFF",
-    image: "/images/nothing-phone-3a.png",
-  },
-  {
-    id: 3,
-    name: "Motorola Edge 60 Pro 5G",
-    price: 37000,
-    oldPrice: 42000,
-    discount: "12% OFF",
-    image: "/images/motorola-edge-60-pro.png",
-  },
-  {
-    id: 4,
-    name: "Motorola Edge 60 Fusion 5G",
-    price: 28700,
-    oldPrice: 38000,
-    discount: "24% OFF",
-    image: "/images/motorola-edge-60-fusion.png",
-  },
-  {
-    id: 5,
-    name: "Pixel 10",
-    price: 81000,
-    oldPrice: null,
-    discount: null,
-    image: "/images/pixel-10.png",
-  },
-  {
-    id: 6,
-    name: "Pixel 10",
-    price: 81000,
-    oldPrice: null,
-    discount: null,
-    image: "/images/pixel-10.png",
-  },
-  {
-    id: 7,
-    name: "Pixel 10",
-    price: 81000,
-    oldPrice: null,
-    discount: null,
-    image: "/images/pixel-10.png",
-  },
-];
+interface Product {
+  _id: string;
+  name: string;
+  price: number;
+  discount?: number;
+  imageUrl: string;
+  createdAt: string;
+}
 
 export default function TopSale() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTopSales() {
+      try {
+        const res = await fetch(api("/products/"));
+        if (res.ok) {
+          const data = await res.json();
+          // Sort by discount descending (products with discount first) and take first 7
+          const sorted = data
+            .sort((a: Product, b: Product) => (b.discount || 0) - (a.discount || 0))
+            .slice(0, 7);
+          setProducts(sorted);
+        }
+      } catch (err) {
+        console.error("Failed to fetch top sales", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTopSales();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-12 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="h-8 bg-gray-200 rounded w-48 mb-8 animate-pulse"></div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-64 bg-gray-200 rounded-2xl animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-12 bg-white">
       <div className="max-w-7xl mx-auto px-4 text-center">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold">
-          Top{" "}
+            Top{" "}
             <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">
-            Sale
+              Sale
             </span>
           </h2>
 
@@ -93,11 +85,10 @@ export default function TopSale() {
           {categories.map((cat) => (
             <button
               key={cat}
-              className={`px-4 py-1 rounded-full text-sm font-medium border transition ${
-                cat === activeCategory
+              className={`px-4 py-1 rounded-full text-sm font-medium border transition ${cat === activeCategory
                   ? "bg-black text-white border-black"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               {cat}
             </button>
@@ -106,43 +97,54 @@ export default function TopSale() {
 
         {/* Product List */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
-          {products.map((product) => (
-            <div
-              key={product.id}
-              className="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-4"
-            >
-              <div className="w-full aspect-[3/4] relative mb-4">
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  fill
-                  className="object-contain rounded-xl"
-                />
-              </div>
+          {products.map((product) => {
+            const discountedPrice = product.discount
+              ? product.price * (1 - product.discount / 100)
+              : product.price;
 
-              <h3 className="text-sm font-medium text-gray-800 mb-1">
-                {product.name}
-              </h3>
+            return (
+              <Link
+                key={product._id}
+                href={`/products/${product._id}`}
+                className="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-4 block"
+              >
+                <div className="w-full aspect-[3/4] relative mb-4">
+                  <Image
+                    src={product.imageUrl}
+                    alt={product.name}
+                    fill
+                    className="object-contain rounded-xl"
+                  />
+                </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold text-black">
-                  ৳ {product.price}
-                </span>
-                {product.oldPrice && (
-                  <span className="text-gray-400 line-through text-sm">
-                    ৳ {product.oldPrice}
+                <h3 className="text-sm font-medium text-gray-800 mb-1">
+                  {product.name}
+                </h3>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold text-black">
+                    ৳ {discountedPrice.toFixed(2)}
+                  </span>
+                  {product.discount && product.discount > 0 && (
+                    <span className="text-gray-400 line-through text-sm">
+                      ৳ {product.price.toFixed(2)}
+                    </span>
+                  )}
+                </div>
+
+                {product.discount && product.discount > 0 && (
+                  <span className="inline-block mt-2 px-2 py-0.5 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
+                    {product.discount}% OFF
                   </span>
                 )}
-              </div>
-
-              {product.discount && (
-                <span className="inline-block mt-2 px-2 py-0.5 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
-                  {product.discount}
-                </span>
-              )}
-            </div>
-          ))}
+              </Link>
+            );
+          })}
         </div>
+
+        {products.length === 0 && !loading && (
+          <p className="text-gray-500 py-8">No products available yet</p>
+        )}
       </div>
     </section>
   );
